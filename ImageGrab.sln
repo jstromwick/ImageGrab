@@ -5,6 +5,8 @@ VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageGrab", "ImageGrab\ImageGrab.csproj", "{6A3CB90D-5193-4FBE-B758-1EE9B266DBBF}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ImageGrabTests", "ImageGrabTests\ImageGrabTests.csproj", "{FABB2BF8-729B-4D0A-8DD2-41CB2301093F}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -15,6 +17,10 @@ Global
 		{6A3CB90D-5193-4FBE-B758-1EE9B266DBBF}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{6A3CB90D-5193-4FBE-B758-1EE9B266DBBF}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{6A3CB90D-5193-4FBE-B758-1EE9B266DBBF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{FABB2BF8-729B-4D0A-8DD2-41CB2301093F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{FABB2BF8-729B-4D0A-8DD2-41CB2301093F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{FABB2BF8-729B-4D0A-8DD2-41CB2301093F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{FABB2BF8-729B-4D0A-8DD2-41CB2301093F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
