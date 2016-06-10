@@ -1,4 +1,5 @@
-﻿using System.IO;
+﻿using System;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using ImageGrab;
@@ -26,8 +27,17 @@ namespace ImageGrabTests
             return imageGrabber.CreateAbsoluteUrl(baseUrl, imgSrcUrl);
         }
 
+        [Test]
+        [TestCase("notaurl")]
+        [TestCase("www.google.com")]
+        public void AssertArgumentExceptionThrownForBadUrl(string url)
+        {
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+            Assert.ThrowsAsync<ArgumentException>(async () => await imageGrabber.DownloadAllImages(url, @"C:\temp\ImageGrabber"));
+        }
+
         [Test, Explicit]
-        public void CleanOutTestDirectory()
+        public void CleanTestDirectory()
         {
             Directory.Delete(@"C:\temp\ImageGrabber", true);
         }
@@ -35,7 +45,7 @@ namespace ImageGrabTests
         [Test]
         public async Task DownloadTest()
         {
-            CleanOutTestDirectory();
+            CleanTestDirectory();
 
             var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
 
@@ -115,14 +125,6 @@ namespace ImageGrabTests
 
             CollectionAssert.AreEquivalent(expectedUrls, urls);
         }
-
-        [Test]
-        public async Task SimpleTest()
-        {
-            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
-            await imageGrabber.GetImages("www.google.com", "");
-        }
-
 
         [Test]
         [TestCase("www.google.com", ExpectedResult = false)]

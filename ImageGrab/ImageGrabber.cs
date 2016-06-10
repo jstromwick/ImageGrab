@@ -18,15 +18,15 @@ namespace ImageGrab
             _log = log;
         }
 
-        public async Task<IEnumerable<DownloadResult>> GetImages(string url, string filePath)
+        public async Task<IEnumerable<DownloadResult>> DownloadAllImages(string url, string filePath)
         {
             if (!CheckUrl(url))
             {
-                _log.DebugFormat("url '{0}' failed formatting check", url);
-                return null;
+                _log.ErrorFormat("url '{0}' failed formatting check", url);
+                throw new ArgumentException($"'{url}' is not a well formed or aboslute url", nameof(url));
             }
-            _log.DebugFormat("Formatting for url '{0}' is valid", url);
 
+            _log.DebugFormat("Formatting for url '{0}' is valid", url);
             var html = await GetHtml(url);
 
             if (html == null)
@@ -39,7 +39,6 @@ namespace ImageGrab
             _log.DebugFormat("Found {0} distinct img urls", imageUrls.Length);
 
             var absUrls = CreateAbsoluteUrls(url, imageUrls);
-
             var downloadResults = await DownloadImages(absUrls, filePath);
 
             return downloadResults;
@@ -102,8 +101,7 @@ namespace ImageGrab
 
             return hostUrl + "/" + string.Join("/", localPath) + "/" + sourceUrl;
         }
-
-
+        
         internal async Task<IEnumerable<DownloadResult>> DownloadImages(IEnumerable<string> urls, string filePath)
         {
             CreatePath(filePath);
@@ -164,7 +162,7 @@ namespace ImageGrab
             return downloadResults;
         }
 
-        internal static bool CheckUrl(string url)
+        public static bool CheckUrl(string url)
         {
             return Uri.IsWellFormedUriString(url, UriKind.Absolute);
         }
