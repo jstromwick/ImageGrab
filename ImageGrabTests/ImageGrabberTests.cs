@@ -13,14 +13,17 @@ namespace ImageGrabTests
     public class ImageGrabberTests
     {
         [TestCase("http://www.hanselman.com/", "/images/blog-hanselminutes.png", ExpectedResult = "http://www.hanselman.com/images/blog-hanselminutes.png")]
-        [TestCase("http://www.hanselman.com/blog/MSBuildStructuredLogRecordAndVisualizeYourBuilds.aspx",
-             "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/aff20f822904_BAA2/image_d.png",
-             ExpectedResult = "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/aff20f822904_BAA2/image_d.png")]
+        [TestCase("http://www.hanselman.com/blog/MSBuildLog.aspx", "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/image_d.png",
+             ExpectedResult = "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/image_d.png")]
         [TestCase("https://www.pivotaltracker.com/why-tracker/", "/marketing_assets/why-binoculars.png",
              ExpectedResult = "https://www.pivotaltracker.com/marketing_assets/why-binoculars.png")]
         [TestCase("http://www.chami.com/html-kit/minit/pages/imgtag1.html", "../../i/g/cached/tmp10.jpg", ExpectedResult = "http://www.chami.com/html-kit/i/g/cached/tmp10.jpg"
          )]
         [TestCase("http://www.chami.com/html-kit/minit/pages/imgtag1.html", "tmp10.jpg", ExpectedResult = "http://www.chami.com/html-kit/minit/pages/tmp10.jpg")]
+        [TestCase("http://www.chami.com/html-kit/minit/pages/imgtag1.html", "./foo/tmp10.jpg", ExpectedResult = "http://www.chami.com/html-kit/minit/pages/foo/tmp10.jpg")]
+        [TestCase("http://www.foo.com/bar/", "//example.com/banner.jpg", ExpectedResult = "http://www.example.com/banner.jpg")]
+        [TestCase("https://www.foo.com/bar/", "//example.com/banner.jpg", ExpectedResult = "https://www.example.com/banner.jpg")]
+        [TestCase("https://www.foo.com/bar/", "//sub.example.com/banner.jpg", ExpectedResult = "https://sub.example.com/banner.jpg")]
         public string CreateAbsoluteUrlTests(string baseUrl, string imgSrcUrl)
         {
             var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
@@ -50,18 +53,48 @@ namespace ImageGrabTests
             var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
 
             const string url = "http://www.hanselman.com/images/blog-hanselminutes.png";
-            var results = await imageGrabber.DownloadImages(new[] {url}, @"C:\temp\ImageGrabber");
+            const string outDirectory = @"C:\temp\ImageGrabber\Hansel";
+            var results = await imageGrabber.DownloadImages(new[] {url}, outDirectory);
 
             Assert.That(results.Count(), Is.EqualTo(1));
             var downloadResult = results.First();
 
             Assert.That(downloadResult.Url, Is.EqualTo(url));
-            Assert.That(downloadResult.FileLocation, Is.EqualTo(@"C:\temp\ImageGrabber\blog-hanselminutes.png"));
+            Assert.That(downloadResult.FileLocation, Is.EqualTo(outDirectory + @"\blog-hanselminutes.png"));
             Assert.That(downloadResult.FileSize, Is.EqualTo(1538));
 
             Assert.That(File.Exists(downloadResult.FileLocation), Is.True);
             var fileInfo = new FileInfo(downloadResult.FileLocation);
             Assert.That(fileInfo.Length, Is.EqualTo(downloadResult.FileSize));
+
+            Directory.Delete(outDirectory, true);
+        }
+
+
+        [Test]
+        public void DummyTest()
+        {
+            var f = "Is \nthis newlines";
+            var f2 = $"Is \nthis {1 + 2}newlines";
+            Console.Write(f);
+            Console.Write(f2);
+        }
+
+        [Test]
+        [TestCase("https://en.wikipedia.org/wiki/Kitten", @"C:\temp\ImageGrabber\Wiki-Kitten", 20, TestName = "Kitten")]
+        [TestCase("http://www.merriam-webster.com/dictionary/turtle", @"C:\temp\ImageGrabber\Merriam-Turtle", 21, TestName = "Turtle")]
+        [TestCase("http://www.hampsterdance.com/meetngreet.htm", @"C:\temp\ImageGrabber\Hampster", 13, TestName = "Hampster")]
+        public async Task FullTest(string url, string fileLocation, int expectedDownloadCount)
+        {
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+            var dResults = await imageGrabber.DownloadAllImages(url, fileLocation);
+
+            Assert.That(dResults, Is.Not.Null);
+            Assert.That(dResults.Count(), Is.EqualTo(expectedDownloadCount));
+            var errors = string.Join("\n", dResults.Where(d => !d.WasSuccessful).Select(d => $"Request to {d.Url} failed with the following reason {d.ErrorReason}"));
+            Assert.That(string.IsNullOrWhiteSpace(errors), Is.True, errors);
+
+            Directory.Delete(fileLocation, true);
         }
 
 
@@ -75,11 +108,10 @@ namespace ImageGrabTests
             Assert.That(html, Does.Contain("google"));
         }
 
-
         [Test]
         public void GetImageUrlsFromHtmlTest()
         {
-            var testHtml = @"
+            const string testHtml = @"
 
 <!DOCTYPE html>
 <html lang=""en"">
