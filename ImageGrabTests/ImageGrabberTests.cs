@@ -1,6 +1,9 @@
-﻿using System;
-using System.IO;
+﻿using System.IO;
+using System.Linq;
+using System.Threading.Tasks;
 using ImageGrab;
+using log4net;
+using NSubstitute;
 using NUnit.Framework;
 
 namespace ImageGrabTests
@@ -8,31 +11,58 @@ namespace ImageGrabTests
     [TestFixture]
     public class ImageGrabberTests
     {
-        [Test]
-        [TestCase("http://www.google.com/foo/bar", "http://www.google.com", new[] { "foo", "bar" })]
-        [TestCase("http://www.google.com/foo/bar/index.html", "http://www.google.com", new[] { "foo", "bar" })]
-        [TestCase("http://www.google.com/foo/bar?toodle=1325", "http://www.google.com", new[] { "foo", "bar" })]
-        [TestCase("http://www.google.com/foo/bar#app/stuff/biz?toodle=1325", "http://www.google.com", new[] { "foo", "bar" })]
-        public void BaseUrlTests(string baseUrl, string expectedHost, string[] expectedPath)
+        [TestCase("http://www.hanselman.com/", "/images/blog-hanselminutes.png", ExpectedResult = "http://www.hanselman.com/images/blog-hanselminutes.png")]
+        [TestCase("http://www.hanselman.com/blog/MSBuildStructuredLogRecordAndVisualizeYourBuilds.aspx",
+             "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/aff20f822904_BAA2/image_d.png",
+             ExpectedResult = "http://www.hanselman.com/blog/content/binary/Windows-Live-Writer/aff20f822904_BAA2/image_d.png")]
+        [TestCase("https://www.pivotaltracker.com/why-tracker/", "/marketing_assets/why-binoculars.png",
+             ExpectedResult = "https://www.pivotaltracker.com/marketing_assets/why-binoculars.png")]
+        [TestCase("http://www.chami.com/html-kit/minit/pages/imgtag1.html", "../../i/g/cached/tmp10.jpg", ExpectedResult = "http://www.chami.com/html-kit/i/g/cached/tmp10.jpg"
+         )]
+        [TestCase("http://www.chami.com/html-kit/minit/pages/imgtag1.html", "tmp10.jpg", ExpectedResult = "http://www.chami.com/html-kit/minit/pages/tmp10.jpg")]
+        public string CreateAbsoluteUrlTests(string baseUrl, string imgSrcUrl)
         {
-            var uri = new Uri(baseUrl, UriKind.Absolute);
-            var host = uri.Host;
-            var scheme = uri.Scheme;
-            
-            var hostUrl = (!string.IsNullOrWhiteSpace(scheme) ? scheme + "://" : "") + host;
-            var localPath = uri.LocalPath.Split(new[] {'/'}, StringSplitOptions.RemoveEmptyEntries);
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+            return imageGrabber.CreateAbsoluteUrl(baseUrl, imgSrcUrl);
+        }
 
-            Assert.AreEqual(expectedHost, hostUrl);
-            CollectionAssert.AreEqual(expectedPath, localPath);
+        [Test, Explicit]
+        public void CleanOutTestDirectory()
+        {
+            Directory.Delete(@"C:\temp\ImageGrabber", true);
         }
 
         [Test]
-        public void GetHtmlTest()
+        public async Task DownloadTest()
         {
-            var imageGrabber = new ImageGrabber();
-            var html = imageGrabber.GetHtml("http://www.google.com");
+            CleanOutTestDirectory();
+
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+
+            const string url = "http://www.hanselman.com/images/blog-hanselminutes.png";
+            var results = await imageGrabber.DownloadImages(new[] {url}, @"C:\temp\ImageGrabber");
+
+            Assert.That(results.Count(), Is.EqualTo(1));
+            var downloadResult = results.First();
+
+            Assert.That(downloadResult.Url, Is.EqualTo(url));
+            Assert.That(downloadResult.FileLocation, Is.EqualTo(@"C:\temp\ImageGrabber\blog-hanselminutes.png"));
+            Assert.That(downloadResult.FileSize, Is.EqualTo(1538));
+
+            Assert.That(File.Exists(downloadResult.FileLocation), Is.True);
+            var fileInfo = new FileInfo(downloadResult.FileLocation);
+            Assert.That(fileInfo.Length, Is.EqualTo(downloadResult.FileSize));
+        }
+
+
+        [Test]
+        public async Task GetHtmlTest()
+        {
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+            var html = await imageGrabber.GetHtml("http://www.google.com");
 
             Assert.IsNotNull(html);
+            Assert.That(html, Does.Contain("google"));
         }
 
 
@@ -87,10 +117,10 @@ namespace ImageGrabTests
         }
 
         [Test]
-        public void SimpleTest()
+        public async Task SimpleTest()
         {
-            var imageGrabber = new ImageGrabber();
-            imageGrabber.GetImages("www.google.com", "");
+            var imageGrabber = new ImageGrabber(Substitute.For<ILog>());
+            await imageGrabber.GetImages("www.google.com", "");
         }
 
 
